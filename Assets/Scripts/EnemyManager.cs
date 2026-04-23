@@ -16,22 +16,31 @@ public class EnemyManager : MonoBehaviour
     [SerializeField] private Image enemyPortraitImage;
     [SerializeField] private Transform pointMobile;
     
+    [Header("Progress Bar")]
+    [SerializeField] private Slider progressBar;
+    [SerializeField] private TextMeshProUGUI progressText;
+    [SerializeField] private TextMeshProUGUI progressPercentageText;
+    [SerializeField] private Image progressFillImage;
+    [SerializeField] private Color progressNormalColor = Color.green;
+    [SerializeField] private Color progressBossColor = Color.red;
+    
     private Enemy currentEnemy;
     private GameObject currentEnemyUI;
     private int currentEnemyIndex = 0;
     private int enemiesKilled = 0;
-    private int savedEnemyHealth = -1; // -1 значит полное здоровье
+    private int savedEnemyHealth = -1;
+    private bool allDefeated = false;
     
-    // Ключи для PlayerPrefs
     private const string ENEMY_INDEX_KEY = "EnemyIndex";
     private const string ENEMY_HEALTH_KEY = "EnemyHealth";
     private const string ENEMIES_KILLED_KEY = "EnemiesKilled";
+    private const string ALL_DEFEATED_KEY = "AllDefeated";
     
     private void Awake()
     {
         if (Instance != null)
         {
-            DestroyImmediate(gameObject);
+            Destroy(gameObject);
         }
         else
         {
@@ -41,32 +50,63 @@ public class EnemyManager : MonoBehaviour
     
     private void Start()
     {
-        // Загружаем сохранённый прогресс
+
         LoadProgress();
         
-        // Проверяем, не закончились ли враги
-        if (currentEnemyIndex >= enemyStates.Length)
+
+        // Проверяем флаг полной победы
+        if (allDefeated)
         {
             Debug.Log("All enemies already defeated!");
-            if (enemyNameText != null)
-                enemyNameText.text = "All Defeated!";
-            if (enemyPortraitImage != null)
-                enemyPortraitImage.gameObject.SetActive(false);
+            ShowVictoryState();
             return;
         }
         
-        // Спавним текущего врага с сохранённым здоровьем
+        // Проверяем индекс
+        if (currentEnemyIndex >= enemyStates.Length)
+        {
+            SetAllDefeated();
+            ShowVictoryState();
+            return;
+        }
+        
         SpawnCurrentEnemy();
+        UpdateProgressBar();
     }
     
-    #region Save/Load System
+    private void ShowVictoryState()
+    {
+        // Уничтожаем любого оставшегося врага
+        if (currentEnemyUI != null)
+        {
+            Destroy(currentEnemyUI);
+            currentEnemyUI = null;
+            currentEnemy = null;
+        }
+        
+        if (enemyNameText != null)
+            enemyNameText.text = "VICTORY!";
+        if (enemyPortraitImage != null)
+            enemyPortraitImage.gameObject.SetActive(false);
+        
+        UpdateProgressBar();
+    }
+    
+    private void SetAllDefeated()
+    {
+        allDefeated = true;
+        currentEnemyIndex = enemyStates.Length;
+        enemiesKilled = enemyStates.Length;
+        savedEnemyHealth = -1;
+        SaveProgress();
+    }
     
     private void SaveProgress()
     {
         PlayerPrefs.SetInt(ENEMY_INDEX_KEY, currentEnemyIndex);
         PlayerPrefs.SetInt(ENEMIES_KILLED_KEY, enemiesKilled);
+        PlayerPrefs.SetInt(ALL_DEFEATED_KEY, allDefeated ? 1 : 0);
         
-        // Сохраняем текущее здоровье врага
         if (currentEnemy != null && !currentEnemy.isDead)
         {
             PlayerPrefs.SetInt(ENEMY_HEALTH_KEY, currentEnemy.currentHealth);
@@ -77,88 +117,138 @@ public class EnemyManager : MonoBehaviour
         }
         
         PlayerPrefs.Save();
-        
-        Debug.Log($"Progress saved: Enemy {currentEnemyIndex}, Killed: {enemiesKilled}, Health: {(currentEnemy != null ? currentEnemy.currentHealth : -1)}");
+        Debug.Log($"💾 Saved: Index={currentEnemyIndex}, Killed={enemiesKilled}, AllDefeated={allDefeated}");
     }
     
     private void LoadProgress()
     {
+Debug.Log("ALL_DEFEATED_KEY raw: " + PlayerPrefs.GetInt(ALL_DEFEATED_KEY, -999));
         currentEnemyIndex = PlayerPrefs.GetInt(ENEMY_INDEX_KEY, 0);
         enemiesKilled = PlayerPrefs.GetInt(ENEMIES_KILLED_KEY, 0);
         savedEnemyHealth = PlayerPrefs.GetInt(ENEMY_HEALTH_KEY, -1);
+        allDefeated = PlayerPrefs.GetInt(ALL_DEFEATED_KEY, 0) == 1;
         
-        Debug.Log($"Progress loaded: Enemy {currentEnemyIndex}, Killed: {enemiesKilled}, Health: {savedEnemyHealth}");
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: если индекс за пределами, но allDefeated не установлен
+        if (currentEnemyIndex >= enemyStates.Length && !allDefeated)
+        {
+            allDefeated = true;
+            enemiesKilled = enemyStates.Length;
+            SaveProgress();
+        }
+        
+        Debug.Log($"📂 Loaded: Index={currentEnemyIndex}, Killed={enemiesKilled}, AllDefeated={allDefeated}");
     }
     
-    #endregion
+    private void UpdateProgressBar()
+    {
+        if (progressBar == null) return;
+        
+        int totalEnemies = enemyStates.Length;
+        
+        progressBar.maxValue = totalEnemies;
+        progressBar.value = allDefeated ? totalEnemies : enemiesKilled;
+        
+        if (progressText != null)
+        {
+            if (allDefeated)
+            {
+                progressText.text = "ALL CLEAR!";
+            }
+            else if (currentEnemyIndex < totalEnemies)
+            {
+                progressText.text = $"{enemyStates[currentEnemyIndex].enemyName}";
+            }
+        }
+        
+        if (progressPercentageText != null)
+        {
+            progressPercentageText.text = allDefeated ? $"{totalEnemies}/{totalEnemies}" : $"{enemiesKilled}/{totalEnemies}";
+        }
+        
+        if (progressFillImage != null)
+        {
+            progressFillImage.color = allDefeated ? progressBossColor : progressNormalColor;
+        }
+    }
     
-    #region Context Menu
+
+private void OnApplicationQuit()
+{
+    SaveProgress();
+}
+
+    private bool IsCurrentEnemyBoss()
+    {
+        if (currentEnemyIndex >= enemyStates.Length) return false;
+        return (currentEnemyIndex + 1) % 3 == 0 || currentEnemyIndex == enemyStates.Length - 1;
+    }
     
     [ContextMenu("Reset Enemy Progress")]
     public void ResetProgress()
     {
+        allDefeated = false;
         currentEnemyIndex = 0;
         enemiesKilled = 0;
         savedEnemyHealth = -1;
         
-        // Чистим сохранения
         PlayerPrefs.DeleteKey(ENEMY_INDEX_KEY);
         PlayerPrefs.DeleteKey(ENEMY_HEALTH_KEY);
         PlayerPrefs.DeleteKey(ENEMIES_KILLED_KEY);
+        PlayerPrefs.DeleteKey(ALL_DEFEATED_KEY);
         PlayerPrefs.Save();
         
-        // Уничтожаем текущего врага если есть
+        // Уничтожаем старого врага если есть
         if (currentEnemyUI != null)
+        {
             Destroy(currentEnemyUI);
+            currentEnemyUI = null;
+            currentEnemy = null;
+        }
         
-        // Включаем отображение если было скрыто
+        // Включаем отображение
         if (enemyPortraitImage != null)
             enemyPortraitImage.gameObject.SetActive(true);
+        if (enemyNameText != null)
+            enemyNameText.text = "";
             
-        // Спавним первого врага
         SpawnCurrentEnemy();
+        UpdateProgressBar();
         
-        Debug.Log("Enemy progress RESET!");
+        Debug.Log("🔄 Enemy progress RESET!");
     }
-    
-    [ContextMenu("Print Current Progress")]
-    public void PrintProgress()
-    {
-        Debug.Log($"--- Enemy Progress ---");
-        Debug.Log($"Current Index: {currentEnemyIndex}/{enemyStates.Length}");
-        Debug.Log($"Enemies Killed: {enemiesKilled}");
-        Debug.Log($"Saved Health: {savedEnemyHealth}");
-        Debug.Log($"All Defeated: {AllEnemiesDefeated()}");
-    }
-    
-    #endregion
     
     private void SpawnCurrentEnemy()
     {
+        // УСИЛЕННАЯ ПРОВЕРКА
+        if (allDefeated)
+        {
+            Debug.Log("❌ Cannot spawn - all enemies defeated (allDefeated flag)!");
+            ShowVictoryState();
+            return;
+        }
+        
         if (currentEnemyIndex >= enemyStates.Length)
         {
-            Debug.Log("All enemies defeated! No more enemies to spawn.");
-            if (enemyNameText != null)
-                enemyNameText.text = "All Defeated!";
-            if (enemyPortraitImage != null)
-                enemyPortraitImage.gameObject.SetActive(false);
+            Debug.Log("❌ Cannot spawn - index out of range! Setting all defeated.");
+            SetAllDefeated();
+            ShowVictoryState();
             return;
         }
         
         EnemyState selectedState = enemyStates[currentEnemyIndex];
+        Debug.Log($"🐣 Spawning enemy: {selectedState.enemyName} at index {currentEnemyIndex}");
         
         SpawnEnemyUI(selectedState);
         UpdateEnemyDisplay(selectedState);
         
-        // Восстанавливаем сохранённое здоровье
         if (currentEnemy != null && savedEnemyHealth > 0)
         {
             currentEnemy.SetHealth(savedEnemyHealth);
-            Debug.Log($"Restored enemy health: {savedEnemyHealth}/{selectedState.maxHealth}");
-            savedEnemyHealth = -1; // Сбрасываем после восстановления
+            Debug.Log($"❤️ Restored health: {savedEnemyHealth}/{selectedState.maxHealth}");
+            savedEnemyHealth = -1;
         }
         
-        Debug.Log($"Spawned enemy: {selectedState.enemyName} (Index: {currentEnemyIndex})");
+        UpdateProgressBar();
     }
     
     private void SpawnEnemyUI(EnemyState state)
@@ -194,70 +284,87 @@ public class EnemyManager : MonoBehaviour
             enemyPortraitImage.sprite = state.icon;
             enemyPortraitImage.gameObject.SetActive(true);
         }
+        
+        UpdateProgressBar();
     }
     
     public void ProcessMergeDamage(int mergePower, Vector2Int position)
     {
-        if (currentEnemy == null || currentEnemy.isDead) 
+        if (currentEnemy == null || currentEnemy.isDead || allDefeated) 
         {
-            // Если врагов нет, просто играем 2048 бесконечно
+            Debug.Log("⚠️ Cannot damage - no enemy or all defeated");
             return;
         }
         
         int damage = currentEnemy.GetDamageForMerge(mergePower);
         currentEnemy.TakeDamage(damage);
         
-        // Сохраняем прогресс после каждого удара
         SaveProgress();
-        
         SoundManager.Instance?.PlayDamageSound();
     }
     
     public void OnEnemyDeath(Enemy enemy)
     {
+        if (allDefeated)
+        {
+            Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
+            return;
+        }
+        
         enemiesKilled++;
         
         SoundManager.Instance?.PlayEnemyDeathSound();
         
-        Debug.Log($"Enemy defeated! Total killed: {enemiesKilled}");
-    
-        // Берём следующего врага
-        currentEnemyIndex++;
-        savedEnemyHealth = -1; // Новый враг с полным здоровьем
+        Debug.Log($"💀 Enemy {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
         
-        // Сохраняем прогресс
-        SaveProgress();
-    
+        // Уничтожаем UI врага
+        if (currentEnemyUI != null)
+        {
+            Destroy(currentEnemyUI);
+            currentEnemyUI = null;
+            currentEnemy = null;
+        }
+        
+        currentEnemyIndex++;
+        savedEnemyHealth = -1;
+        
         // Проверяем, всех ли врагов убили
         if (currentEnemyIndex >= enemyStates.Length)
         {
-            Debug.Log("ALL ENEMIES DEFEATED! Final victory!");
-            
-            if (enemyNameText != null)
-                enemyNameText.text = "VICTORY!";
-            if (enemyPortraitImage != null)
-                enemyPortraitImage.gameObject.SetActive(false);
-                
-            // Не вызываем GameOver, врагов больше нет
+            Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
+            SetAllDefeated();
+            ShowVictoryState();
             return;
         }
         
-        // Проверка на босса (последний враг)
+        // Проверка на босса
         if (currentEnemyIndex == enemyStates.Length - 1)
         {
             SoundManager.Instance?.PlayBossMusic();
         }
+        
+        SaveProgress();
+        UpdateProgressBar();
     
+        // Спавним следующего врага с задержкой
         StartCoroutine(RespawnEnemyWithDelay(0.8f));
     }
     
     private IEnumerator RespawnEnemyWithDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
-        SpawnCurrentEnemy();
+        
+        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА после задержки
+        if (!allDefeated && currentEnemyIndex < enemyStates.Length)
+        {
+            SpawnCurrentEnemy();
+        }
+        else
+        {
+            Debug.Log("⚠️ Respawn cancelled - all enemies defeated or invalid index");
+        }
     }
     
-    // Публичные геттеры для UI
     public EnemyState GetCurrentEnemyState()
     {
         return currentEnemy != null ? currentEnemy.state : null;
@@ -265,7 +372,7 @@ public class EnemyManager : MonoBehaviour
     
     public string GetEnemyProgressText()
     {
-        if (currentEnemyIndex >= enemyStates.Length)
+        if (allDefeated)
             return "All enemies defeated!";
             
         return $"Enemy {currentEnemyIndex + 1}/{enemyStates.Length}";
@@ -277,6 +384,6 @@ public class EnemyManager : MonoBehaviour
     
     public bool AllEnemiesDefeated()
     {
-        return currentEnemyIndex >= enemyStates.Length;
+        return allDefeated;
     }
 }

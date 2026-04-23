@@ -53,6 +53,7 @@ public class Enemy : MonoBehaviour
     {
         GameManager.Instance.OnEnemyKilled(state);
         EnemyManager.Instance.OnEnemyDeath(this);
+        Destroy(gameObject);
     }
     
     public int GetDamageForMerge(int mergePower)

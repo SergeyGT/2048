@@ -26,13 +26,6 @@ public class TileBoard : MonoBehaviour
         input = new GameInputControls();
     }
     
-    private void Start()
-    {
-        if (EnemyManager.Instance != null)
-        {
-            //EnemyManager.Instance.ResetProgress();
-        }
-    }
 
     private void OnEnable()
     {
