@@ -30,6 +30,7 @@ public class EnemyManager : MonoBehaviour
     private int enemiesKilled = 0;
     private int savedEnemyHealth = -1;
     private bool allDefeated = false;
+    private Coroutine respawnCoroutine;
     
     private const string ENEMY_INDEX_KEY = "EnemyIndex";
     private const string ENEMY_HEALTH_KEY = "EnemyHealth";
@@ -41,6 +42,7 @@ public class EnemyManager : MonoBehaviour
         if (Instance != null)
         {
             Destroy(gameObject);
+            return;
         }
         else
         {
@@ -50,32 +52,65 @@ public class EnemyManager : MonoBehaviour
     
     private void Start()
     {
-
-        LoadProgress();
         
+    LoadProgress();
+    
+    // Проверяем флаг полной победы
+    if (allDefeated)
+    {
+        Debug.Log("All enemies already defeated!");
+        ShowVictoryState();
+        return;
+    }
+    
+    // Проверяем индекс
+    if (currentEnemyIndex >= enemyStates.Length)
+    {
+        SetAllDefeated();
+        ShowVictoryState();
+        return;
+    }
+    
+    // ★ Запускаем первый спавн с небольшой задержкой
+    StartCoroutine(InitialSpawn());
+    }
 
-        // Проверяем флаг полной победы
-        if (allDefeated)
+private IEnumerator InitialSpawn()
+{
+    yield return null; // ★ Ждём один кадр, чтобы все компоненты инициализировались
+    SpawnCurrentEnemy();
+    UpdateProgressBar();
+}
+    
+    private void OnDestroy()
+    {
+        // Останавливаем корутину при уничтожении объекта
+        if (respawnCoroutine != null)
         {
-            Debug.Log("All enemies already defeated!");
-            ShowVictoryState();
-            return;
+            StopCoroutine(respawnCoroutine);
+            respawnCoroutine = null;
         }
         
-        // Проверяем индекс
-        if (currentEnemyIndex >= enemyStates.Length)
+        if (Instance == this)
         {
-            SetAllDefeated();
-            ShowVictoryState();
-            return;
+            Instance = null;
         }
-        
-        SpawnCurrentEnemy();
-        UpdateProgressBar();
+    }
+    
+    private void OnApplicationQuit()
+    {
+        SaveProgress();
     }
     
     private void ShowVictoryState()
     {
+        // Останавливаем респавн если есть
+        if (respawnCoroutine != null)
+        {
+            StopCoroutine(respawnCoroutine);
+            respawnCoroutine = null;
+        }
+        
         // Уничтожаем любого оставшегося врага
         if (currentEnemyUI != null)
         {
@@ -122,13 +157,12 @@ public class EnemyManager : MonoBehaviour
     
     private void LoadProgress()
     {
-Debug.Log("ALL_DEFEATED_KEY raw: " + PlayerPrefs.GetInt(ALL_DEFEATED_KEY, -999));
         currentEnemyIndex = PlayerPrefs.GetInt(ENEMY_INDEX_KEY, 0);
         enemiesKilled = PlayerPrefs.GetInt(ENEMIES_KILLED_KEY, 0);
         savedEnemyHealth = PlayerPrefs.GetInt(ENEMY_HEALTH_KEY, -1);
         allDefeated = PlayerPrefs.GetInt(ALL_DEFEATED_KEY, 0) == 1;
         
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: если индекс за пределами, но allDefeated не установлен
+        // Дополнительная проверка: если индекс за пределами, но allDefeated не установлен
         if (currentEnemyIndex >= enemyStates.Length && !allDefeated)
         {
             allDefeated = true;
@@ -171,21 +205,16 @@ Debug.Log("ALL_DEFEATED_KEY raw: " + PlayerPrefs.GetInt(ALL_DEFEATED_KEY, -999))
         }
     }
     
-
-private void OnApplicationQuit()
-{
-    SaveProgress();
-}
-
-    private bool IsCurrentEnemyBoss()
-    {
-        if (currentEnemyIndex >= enemyStates.Length) return false;
-        return (currentEnemyIndex + 1) % 3 == 0 || currentEnemyIndex == enemyStates.Length - 1;
-    }
-    
     [ContextMenu("Reset Enemy Progress")]
     public void ResetProgress()
     {
+        // Останавливаем респавн
+        if (respawnCoroutine != null)
+        {
+            StopCoroutine(respawnCoroutine);
+            respawnCoroutine = null;
+        }
+        
         allDefeated = false;
         currentEnemyIndex = 0;
         enemiesKilled = 0;
@@ -219,7 +248,7 @@ private void OnApplicationQuit()
     
     private void SpawnCurrentEnemy()
     {
-        // УСИЛЕННАЯ ПРОВЕРКА
+        // Усиленная проверка
         if (allDefeated)
         {
             Debug.Log("❌ Cannot spawn - all enemies defeated (allDefeated flag)!");
@@ -233,6 +262,18 @@ private void OnApplicationQuit()
             SetAllDefeated();
             ShowVictoryState();
             return;
+        }
+        
+        // Проверяем, что враг ещё не существует
+        if (currentEnemy != null || currentEnemyUI != null)
+        {
+            Debug.LogWarning("⚠️ Enemy already exists! Destroying before spawn...");
+            if (currentEnemyUI != null)
+            {
+                Destroy(currentEnemyUI);
+                currentEnemyUI = null;
+                currentEnemy = null;
+            }
         }
         
         EnemyState selectedState = enemyStates[currentEnemyIndex];
@@ -253,25 +294,62 @@ private void OnApplicationQuit()
     
     private void SpawnEnemyUI(EnemyState state)
     {
-        if (currentEnemyUI != null)
-            Destroy(currentEnemyUI);
-            
-        if (enemyUIPrefab != null && enemyUIContainer != null)
+    // Очищаем старые ссылки и уничтожаем старого врага
+    if (currentEnemyUI != null)
+    {
+        // Отключаем врага перед уничтожением чтобы не вызвать OnDeath
+        if (currentEnemy != null)
         {
-            currentEnemyUI = Instantiate(enemyUIPrefab, enemyUIContainer);
-            
-            RectTransform rect = currentEnemyUI.GetComponent<RectTransform>();
-            if (rect != null)
-            {
-                if (Application.isMobilePlatform) 
-                    rect.anchoredPosition = pointMobile.localPosition;
-            }
-            
-            currentEnemy = currentEnemyUI.GetComponent<Enemy>();
-            
-            if (currentEnemy != null)
-                currentEnemy.Initialize(state);
+            currentEnemy.enabled = false; // ★ Отключаем скрипт
         }
+        
+        GameObject oldUI = currentEnemyUI;
+        currentEnemyUI = null;
+        currentEnemy = null;
+        
+        // Принудительно уничтожаем немедленно, а не в конце кадра
+        if (Application.isPlaying)
+            Destroy(oldUI);
+        else
+            DestroyImmediate(oldUI);
+    }
+    
+    // Дополнительно: ищем и уничтожаем все объекты врагов в контейнере
+    if (enemyUIContainer != null)
+    {
+        foreach (Transform child in enemyUIContainer)
+        {
+            if (child.gameObject.name.StartsWith("Enemy_"))
+            {
+                Debug.LogWarning($"🧹 Cleaning up leftover enemy: {child.name}");
+                if (Application.isPlaying)
+                    Destroy(child.gameObject);
+                else
+                    DestroyImmediate(child.gameObject);
+            }
+        }
+    }
+    
+    if (enemyUIPrefab != null && enemyUIContainer != null)
+    {
+        currentEnemyUI = Instantiate(enemyUIPrefab, enemyUIContainer);
+        currentEnemyUI.name = $"Enemy_{state.enemyName}";
+        
+        RectTransform rect = currentEnemyUI.GetComponent<RectTransform>();
+        if (rect != null)
+        {
+            if (Application.isMobilePlatform) 
+                rect.anchoredPosition = pointMobile.localPosition;
+        }
+        
+        currentEnemy = currentEnemyUI.GetComponent<Enemy>();
+        
+        if (currentEnemy != null)
+        {
+            currentEnemy.enabled = true; // ★ Включаем скрипт обратно
+            currentEnemy.Initialize(state);
+        }
+    }
     }
     
     private void UpdateEnemyDisplay(EnemyState state)
@@ -290,78 +368,112 @@ private void OnApplicationQuit()
     
     public void ProcessMergeDamage(int mergePower, Vector2Int position)
     {
-        if (currentEnemy == null || currentEnemy.isDead || allDefeated) 
+        // Усиленная проверка
+        if (currentEnemy == null || currentEnemyUI == null) 
         {
-            Debug.Log("⚠️ Cannot damage - no enemy or all defeated");
+            Debug.Log("⚠️ Cannot damage - no enemy object");
+            return;
+        }
+        
+        if (currentEnemy.isDead || allDefeated) 
+        {
+            Debug.Log("⚠️ Cannot damage - enemy dead or all defeated");
             return;
         }
         
         int damage = currentEnemy.GetDamageForMerge(mergePower);
         currentEnemy.TakeDamage(damage);
         
-        SaveProgress();
         SoundManager.Instance?.PlayDamageSound();
     }
     
     public void OnEnemyDeath(Enemy enemy)
     {
-    if (allDefeated)
-    {
-        Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
-        return;
-    }
-    
-    enemiesKilled++;
-    
-    SoundManager.Instance?.PlayEnemyDeathSound();
-    
-    Debug.Log($"💀 Enemy {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
-    
-    // Уничтожаем UI врага
-    if (currentEnemyUI != null)
-    {
+        // Проверка: не обрабатываем смерть если все уже побеждены
+        if (allDefeated)
+        {
+            Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
+            return;
+        }
+        
+        // Проверка: умирает именно текущий враг
+        if (enemy != currentEnemy)
+        {
+            Debug.LogWarning($"⚠️ OnEnemyDeath called for wrong enemy! Expected: {(currentEnemy != null ? currentEnemy.name : "null")}, Got: {enemy.name}");
+            return;
+        }
+        
+        // Проверка: враг ещё не уничтожен
+        if (currentEnemyUI == null)
+        {
+            Debug.LogWarning("⚠️ OnEnemyDeath called but enemy UI already destroyed!");
+            return;
+        }
+        
+        enemiesKilled++;
+        
+        SoundManager.Instance?.PlayEnemyDeathSound();
+        
+        Debug.Log($"💀 Enemy {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
+        
+        // Уничтожаем UI врага
         Destroy(currentEnemyUI);
         currentEnemyUI = null;
         currentEnemy = null;
-    }
-    
-    currentEnemyIndex++;
-    savedEnemyHealth = -1;
-    
-    // Проверяем, всех ли врагов убили
-    if (currentEnemyIndex >= enemyStates.Length)
-    {
-        Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
-        SetAllDefeated();
-        ShowVictoryState();
-        // ★ ВОТ ЭТУ СТРОКУ ДОБАВЬТЕ:
+        
+        currentEnemyIndex++;
+        savedEnemyHealth = -1;
+        
+        // Останавливаем предыдущую корутину, если есть
+        if (respawnCoroutine != null)
+        {
+            StopCoroutine(respawnCoroutine);
+            respawnCoroutine = null;
+        }
+        
+        // Проверяем, всех ли врагов убили
+        if (currentEnemyIndex >= enemyStates.Length)
+        {
+            Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
+            SetAllDefeated();
+            ShowVictoryState();
+            BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
+            return;
+        }
+        
+        // Проверка на босса (последний враг)
+        if (currentEnemyIndex == enemyStates.Length - 1)
+        {
+            SoundManager.Instance?.PlayBossMusic();
+        }
+        
         BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
-        return;
-    }
+        
+        SaveProgress();
+        UpdateProgressBar();
     
-    // Проверка на босса
-    if (currentEnemyIndex == enemyStates.Length - 1)
-    {
-        SoundManager.Instance?.PlayBossMusic();
-    }
-    
-    // ★ И ЭТУ СТРОКУ ДОБАВЬТЕ:
-    BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
-    
-    SaveProgress();
-    UpdateProgressBar();
-
-    StartCoroutine(RespawnEnemyWithDelay(0.8f));
+        // Запускаем респавн с задержкой
+        respawnCoroutine = StartCoroutine(RespawnEnemyWithDelay(0.8f));
     }
     
     private IEnumerator RespawnEnemyWithDelay(float delay)
     {
         yield return new WaitForSeconds(delay);
         
-        // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА после задержки
+        respawnCoroutine = null;
+        
+        // Дополнительная проверка после задержки
         if (!allDefeated && currentEnemyIndex < enemyStates.Length)
         {
-            SpawnCurrentEnemy();
+            // Проверяем, что враг ещё не создан
+            if (currentEnemy == null && currentEnemyUI == null)
+            {
+                SpawnCurrentEnemy();
+            }
+            else
+            {
+                Debug.LogWarning("⚠️ Enemy already exists, skipping spawn");
+            }
         }
         else
         {

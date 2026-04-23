@@ -10,10 +10,13 @@ public class Enemy : MonoBehaviour
     public int currentHealth { get; private set; }
     public bool isDead => currentHealth <= 0;
     
+    private bool deathProcessed = false;
+    
     public void Initialize(EnemyState enemyState)
     {
         state = enemyState;
         currentHealth = enemyState.maxHealth;
+        deathProcessed = false;
         
         if (enemyIcon != null)
             enemyIcon.sprite = enemyState.icon;
@@ -29,13 +32,14 @@ public class Enemy : MonoBehaviour
     
     public void TakeDamage(int damage)
     {
-        if (isDead) return;
+        if (isDead || deathProcessed) return;
         
         currentHealth = Mathf.Max(0, currentHealth - damage);
         UpdateHealthBar();
         
-        if (isDead)
+        if (isDead && !deathProcessed)
         {
+            deathProcessed = true;
             OnDeath();
         }
     }
@@ -53,11 +57,19 @@ public class Enemy : MonoBehaviour
     {
         GameManager.Instance.OnEnemyKilled(state);
         EnemyManager.Instance.OnEnemyDeath(this);
-        Destroy(gameObject);
     }
     
     public int GetDamageForMerge(int mergePower)
     {
         return Mathf.RoundToInt(mergePower * state.damageMultiplier);
+    }
+    
+    private void OnDestroy()
+    {
+        // Если враг уничтожается через Destroy(), а не через смерть
+        if (!deathProcessed && currentHealth > 0)
+        {
+            Debug.Log($"🗑️ Enemy {state?.enemyName} destroyed without dying");
+        }
     }
 }
