@@ -305,49 +305,53 @@ private void OnApplicationQuit()
     
     public void OnEnemyDeath(Enemy enemy)
     {
-        if (allDefeated)
-        {
-            Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
-            return;
-        }
-        
-        enemiesKilled++;
-        
-        SoundManager.Instance?.PlayEnemyDeathSound();
-        
-        Debug.Log($"💀 Enemy {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
-        
-        // Уничтожаем UI врага
-        if (currentEnemyUI != null)
-        {
-            Destroy(currentEnemyUI);
-            currentEnemyUI = null;
-            currentEnemy = null;
-        }
-        
-        currentEnemyIndex++;
-        savedEnemyHealth = -1;
-        
-        // Проверяем, всех ли врагов убили
-        if (currentEnemyIndex >= enemyStates.Length)
-        {
-            Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
-            SetAllDefeated();
-            ShowVictoryState();
-            return;
-        }
-        
-        // Проверка на босса
-        if (currentEnemyIndex == enemyStates.Length - 1)
-        {
-            SoundManager.Instance?.PlayBossMusic();
-        }
-        
-        SaveProgress();
-        UpdateProgressBar();
+    if (allDefeated)
+    {
+        Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
+        return;
+    }
     
-        // Спавним следующего врага с задержкой
-        StartCoroutine(RespawnEnemyWithDelay(0.8f));
+    enemiesKilled++;
+    
+    SoundManager.Instance?.PlayEnemyDeathSound();
+    
+    Debug.Log($"💀 Enemy {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
+    
+    // Уничтожаем UI врага
+    if (currentEnemyUI != null)
+    {
+        Destroy(currentEnemyUI);
+        currentEnemyUI = null;
+        currentEnemy = null;
+    }
+    
+    currentEnemyIndex++;
+    savedEnemyHealth = -1;
+    
+    // Проверяем, всех ли врагов убили
+    if (currentEnemyIndex >= enemyStates.Length)
+    {
+        Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
+        SetAllDefeated();
+        ShowVictoryState();
+        // ★ ВОТ ЭТУ СТРОКУ ДОБАВЬТЕ:
+        BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
+        return;
+    }
+    
+    // Проверка на босса
+    if (currentEnemyIndex == enemyStates.Length - 1)
+    {
+        SoundManager.Instance?.PlayBossMusic();
+    }
+    
+    // ★ И ЭТУ СТРОКУ ДОБАВЬТЕ:
+    BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
+    
+    SaveProgress();
+    UpdateProgressBar();
+
+    StartCoroutine(RespawnEnemyWithDelay(0.8f));
     }
     
     private IEnumerator RespawnEnemyWithDelay(float delay)
