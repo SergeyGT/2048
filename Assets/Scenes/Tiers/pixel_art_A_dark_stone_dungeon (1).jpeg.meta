@@ -173,7 +173,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      pixel_art_A_dark_stone_dungeon (1)_0: -240972352351845255
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
