@@ -21,6 +21,12 @@ public class Enemy : MonoBehaviour
         UpdateHealthBar();
     }
     
+    public void SetHealth(int health)
+    {
+        currentHealth = Mathf.Clamp(health, 0, state.maxHealth);
+        UpdateHealthBar();
+    }
+    
     public void TakeDamage(int damage)
     {
         if (isDead) return;
@@ -41,15 +47,10 @@ public class Enemy : MonoBehaviour
             healthBar.maxValue = state.maxHealth;
             healthBar.value = currentHealth;
         }
-        else
-        {
-            Debug.Log("No Health Bar Set");
-        }
     }
     
     private void OnDeath()
     {
-        // Визуальный эффект смерти
         GameManager.Instance.OnEnemyKilled(state);
         EnemyManager.Instance.OnEnemyDeath(this);
     }

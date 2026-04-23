@@ -30,7 +30,7 @@ public class TileBoard : MonoBehaviour
     {
         if (EnemyManager.Instance != null)
         {
-            EnemyManager.Instance.ResetProgress();
+            //EnemyManager.Instance.ResetProgress();
         }
     }
 
