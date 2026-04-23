@@ -173,7 +173,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      pixel_art_A_triumphant_fantasy_0: 2232737314291555905
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

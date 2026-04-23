@@ -173,7 +173,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      pixel_art_A_gothic_dark_citade_0: 1027511724451860774
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

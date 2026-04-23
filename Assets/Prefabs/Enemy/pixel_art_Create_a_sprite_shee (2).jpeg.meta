@@ -173,7 +173,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      pixel_art_Create_a_sprite_shee (2)_0: -2361735010213182358
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
