@@ -11,8 +11,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private CanvasGroup gameOver;
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI hiscoreText;
+    [SerializeField] private TextMeshProUGUI coinsText; // Если есть UI для монет
+    
+    [Header("Ad Timer")]
+    [SerializeField] private float adIntervalMinutes = 5f;
 
     public int score { get; private set; } = 0;
+    private bool isGameOver = false;
+    private float lastAdTime;
 
     private void Awake()
     {
@@ -23,13 +29,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        if (Instance == this) {
-            Instance = null;
-        }
-    }
-
     private void Start()
     {
         NewGame();
@@ -37,33 +36,61 @@ public class GameManager : MonoBehaviour
 
     public void NewGame()
     {
-        // reset score
         SetScore(0);
-        hiscoreText.text = LoadHiscore().ToString();
+        
+        // Показываем рекорд
+        int bestScore = LeaderboardManager.Instance?.GetBestScore() ?? 0;
+        hiscoreText.text = bestScore.ToString();
+        
+        // Показываем монеты
+        if (coinsText != null)
+        {
+            coinsText.text = LeaderboardManager.Instance?.GetCoins().ToString() ?? "0";
+        }
 
-        // hide game over screen
         gameOver.alpha = 0f;
         gameOver.interactable = false;
+        isGameOver = false;
 
-        // update board state
         board.ClearBoard();
         board.CreateTile();
         board.CreateTile();
         board.enabled = true;
         
+        // Запоминаем время для отслеживания интервала рекламы
+        lastAdTime = Time.time;
+        
         SoundManager.Instance?.PlayBackgroundMusic();
+    }
+
+    private void Update()
+    {
+        // Проверяем, прошло ли 5 минут для показа рекламы
+        if (!isGameOver && Time.time - lastAdTime >= adIntervalMinutes * 60f)
+        {
+            lastAdTime = Time.time;
+            MonetisationManager.Instance?.TryShowInterstitial();
+        }
     }
 
     public void GameOver()
     {
+        if (isGameOver) return;
+        
+        isGameOver = true;
         board.enabled = false;
         gameOver.interactable = true;
 
         SoundManager.Instance?.PlayGameOverSound();
         SoundManager.Instance?.PlayGameOverMusic();
         
-        StartCoroutine(Fade(gameOver, 1f, 1f));
+        // Сохраняем рекорд в лидерборд
+        LeaderboardManager.Instance?.SetLeaderboard(score);
         
+        // Показываем рекламу при поражении
+        MonetisationManager.Instance?.TryShowInterstitial();
+        
+        StartCoroutine(Fade(gameOver, 1f, 1f));
     }
 
     private IEnumerator Fade(CanvasGroup canvasGroup, float to, float delay = 0f)
@@ -94,22 +121,6 @@ public class GameManager : MonoBehaviour
     {
         this.score = score;
         scoreText.text = score.ToString();
-
-        SaveHiscore();
-    }
-
-    private void SaveHiscore()
-    {
-        int hiscore = LoadHiscore();
-
-        if (score > hiscore) {
-            PlayerPrefs.SetInt("hiscore", score);
-        }
-    }
-
-    private int LoadHiscore()
-    {
-        return PlayerPrefs.GetInt("hiscore", 0);
     }
     
     public void OnEnemyKilled(EnemyState enemyState)
@@ -119,5 +130,4 @@ public class GameManager : MonoBehaviour
             IncreaseScore(enemyState.scoreReward);
         }
     }
-
 }
