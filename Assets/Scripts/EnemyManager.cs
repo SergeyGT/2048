@@ -157,52 +157,56 @@ private IEnumerator InitialSpawn()
     
     private void LoadProgress()
     {
-        currentEnemyIndex = PlayerPrefs.GetInt(ENEMY_INDEX_KEY, 0);
-        enemiesKilled = PlayerPrefs.GetInt(ENEMIES_KILLED_KEY, 0);
-        savedEnemyHealth = PlayerPrefs.GetInt(ENEMY_HEALTH_KEY, -1);
-        allDefeated = PlayerPrefs.GetInt(ALL_DEFEATED_KEY, 0) == 1;
-        
-        // Дополнительная проверка: если индекс за пределами, но allDefeated не установлен
-        if (currentEnemyIndex >= enemyStates.Length && !allDefeated)
-        {
-            allDefeated = true;
-            enemiesKilled = enemyStates.Length;
-            SaveProgress();
-        }
-        
-        Debug.Log($"📂 Loaded: Index={currentEnemyIndex}, Killed={enemiesKilled}, AllDefeated={allDefeated}");
+    currentEnemyIndex = PlayerPrefs.GetInt(ENEMY_INDEX_KEY, 0);
+    enemiesKilled = PlayerPrefs.GetInt(ENEMIES_KILLED_KEY, 0);
+    savedEnemyHealth = PlayerPrefs.GetInt(ENEMY_HEALTH_KEY, -1);
+    allDefeated = PlayerPrefs.GetInt(ALL_DEFEATED_KEY, 0) == 1;
+    
+    if (currentEnemyIndex >= enemyStates.Length && !allDefeated)
+    {
+        allDefeated = true;
+        enemiesKilled = enemyStates.Length;
+        SaveProgress();
+    }
+    
+    Debug.Log($"📂 Loaded: Index={currentEnemyIndex}, Killed={enemiesKilled}, AllDefeated={allDefeated}");
+    
+    // ✅ Инициализируем фон с правильным индексом после загрузки
+    BackgroundManager.Instance?.InitializeBackground(currentEnemyIndex, allDefeated);
     }
     
     private void UpdateProgressBar()
     {
-        if (progressBar == null) return;
-        
-        int totalEnemies = enemyStates.Length;
-        
-        progressBar.maxValue = totalEnemies;
-        progressBar.value = allDefeated ? totalEnemies : enemiesKilled;
-        
-        if (progressText != null)
+    if (progressBar == null) return;
+    
+    int totalEnemies = enemyStates.Length;
+    
+    progressBar.maxValue = totalEnemies;
+    
+    // Всегда используем enemiesKilled для прогресс-бара
+    progressBar.value = Mathf.Clamp(enemiesKilled, 0, totalEnemies);
+    
+    if (progressText != null)
+    {
+        if (allDefeated)
         {
-            if (allDefeated)
-            {
-                progressText.text = "ALL CLEAR!";
-            }
-            else if (currentEnemyIndex < totalEnemies)
-            {
-                progressText.text = $"{enemyStates[currentEnemyIndex].enemyName}";
-            }
+            progressText.text = "ALL CLEAR!";
         }
-        
-        if (progressPercentageText != null)
+        else if (currentEnemyIndex < totalEnemies)
         {
-            progressPercentageText.text = allDefeated ? $"{totalEnemies}/{totalEnemies}" : $"{enemiesKilled}/{totalEnemies}";
+            progressText.text = $"{enemyStates[currentEnemyIndex].enemyName}";
         }
-        
-        if (progressFillImage != null)
-        {
-            progressFillImage.color = allDefeated ? progressBossColor : progressNormalColor;
-        }
+    }
+    
+    if (progressPercentageText != null)
+    {
+        progressPercentageText.text = $"{enemiesKilled}/{totalEnemies}";
+    }
+    
+    if (progressFillImage != null)
+    {
+        progressFillImage.color = allDefeated ? progressBossColor : progressNormalColor;
+    }
     }
     
     [ContextMenu("Reset Enemy Progress")]
@@ -389,71 +393,79 @@ private IEnumerator InitialSpawn()
     
     public void OnEnemyDeath(Enemy enemy)
     {
-        // Проверка: не обрабатываем смерть если все уже побеждены
-        if (allDefeated)
-        {
-            Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
-            return;
-        }
-        
-        // Проверка: умирает именно текущий враг
-        if (enemy != currentEnemy)
-        {
-            Debug.LogWarning($"⚠️ OnEnemyDeath called for wrong enemy! Expected: {(currentEnemy != null ? currentEnemy.name : "null")}, Got: {enemy.name}");
-            return;
-        }
-        
-        // Проверка: враг ещё не уничтожен
-        if (currentEnemyUI == null)
-        {
-            Debug.LogWarning("⚠️ OnEnemyDeath called but enemy UI already destroyed!");
-            return;
-        }
-        
-        enemiesKilled++;
-        
-        SoundManager.Instance?.PlayEnemyDeathSound();
-        
-        Debug.Log($"💀 Enemy {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
-        
-        // Уничтожаем UI врага
+    Debug.Log($"☠️ OnEnemyDeath called. Enemy: {(enemy != null ? enemy.name : "null")}, CurrentEnemy: {(currentEnemy != null ? currentEnemy.name : "null")}");
+    
+    // Проверка: не обрабатываем смерть если все уже побеждены
+    if (allDefeated)
+    {
+        Debug.Log("⚠️ OnEnemyDeath called but all enemies already defeated!");
+        return;
+    }
+    
+    // Проверка: умирает именно текущий враг
+    if (enemy != currentEnemy)
+    {
+        Debug.LogWarning($"⚠️ Wrong enemy died! Expected: {(currentEnemy != null ? currentEnemy.name : "null")}, Got: {enemy.name}");
+        return;
+    }
+    
+    // Проверка: враг ещё не уничтожен
+    if (currentEnemyUI == null)
+    {
+        Debug.LogWarning("⚠️ OnEnemyDeath called but enemy UI already destroyed!");
+        return;
+    }
+    
+    // Увеличиваем счетчик ТОЛЬКО здесь и ТОЛЬКО один раз
+    enemiesKilled = currentEnemyIndex + 1;
+    
+    SoundManager.Instance?.PlayEnemyDeathSound();
+    
+    Debug.Log($"💀 Enemy at index {currentEnemyIndex} defeated! Killed: {enemiesKilled}/{enemyStates.Length}");
+    
+    // Уничтожаем UI врага
+    if (currentEnemyUI != null)
+    {
         Destroy(currentEnemyUI);
         currentEnemyUI = null;
         currentEnemy = null;
-        
-        currentEnemyIndex++;
-        savedEnemyHealth = -1;
-        
-        // Останавливаем предыдущую корутину, если есть
-        if (respawnCoroutine != null)
-        {
-            StopCoroutine(respawnCoroutine);
-            respawnCoroutine = null;
-        }
-        
-        // Проверяем, всех ли врагов убили
-        if (currentEnemyIndex >= enemyStates.Length)
-        {
-            Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
-            SetAllDefeated();
-            ShowVictoryState();
-            BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
-            return;
-        }
-        
-        // Проверка на босса (последний враг)
-        if (currentEnemyIndex == enemyStates.Length - 1)
-        {
-            SoundManager.Instance?.PlayBossMusic();
-        }
-        
-        BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
-        
-        SaveProgress();
-        UpdateProgressBar();
+    }
     
-        // Запускаем респавн с задержкой
-        respawnCoroutine = StartCoroutine(RespawnEnemyWithDelay(0.8f));
+    // Переходим к следующему врагу
+    currentEnemyIndex++;
+    savedEnemyHealth = -1;
+    
+    // Останавливаем предыдущую корутину
+    if (respawnCoroutine != null)
+    {
+        StopCoroutine(respawnCoroutine);
+        respawnCoroutine = null;
+    }
+    
+    // Проверяем, всех ли врагов убили
+    if (currentEnemyIndex >= enemyStates.Length)
+    {
+        Debug.Log("🎉 ALL ENEMIES DEFEATED! Victory!");
+        SetAllDefeated();
+        ShowVictoryState();
+        BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
+        return;
+    }
+    
+    // Проверка на босса (последний враг)
+    if (currentEnemyIndex == enemyStates.Length - 1)
+    {
+        SoundManager.Instance?.PlayBossMusic();
+    }
+    
+    BackgroundManager.Instance?.OnEnemyChanged(currentEnemyIndex);
+    
+    // Сохраняем прогресс и обновляем UI
+    SaveProgress();
+    UpdateProgressBar();
+
+    // Запускаем респавн с задержкой
+    respawnCoroutine = StartCoroutine(RespawnEnemyWithDelay(0.8f));
     }
     
     private IEnumerator RespawnEnemyWithDelay(float delay)
