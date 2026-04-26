@@ -11,7 +11,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private CanvasGroup gameOver;
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI hiscoreText;
-    [SerializeField] private TextMeshProUGUI coinsText; // Если есть UI для монет
+    [SerializeField] private TextMeshProUGUI coinsText;
     
     [Header("Ad Timer")]
     [SerializeField] private float adIntervalMinutes = 5f;
@@ -38,11 +38,9 @@ public class GameManager : MonoBehaviour
     {
         SetScore(0);
         
-        // Показываем рекорд
         int bestScore = LeaderboardManager.Instance?.GetBestScore() ?? 0;
         hiscoreText.text = bestScore.ToString();
         
-        // Показываем монеты
         if (coinsText != null)
         {
             coinsText.text = LeaderboardManager.Instance?.GetCoins().ToString() ?? "0";
@@ -57,19 +55,26 @@ public class GameManager : MonoBehaviour
         board.CreateTile();
         board.enabled = true;
         
-        // Запоминаем время для отслеживания интервала рекламы
         lastAdTime = Time.time;
         
         SoundManager.Instance?.PlayBackgroundMusic();
+        
+        Debug.Log($"🆕 New Game started. Ad timer: {adIntervalMinutes} minutes");
     }
 
     private void Update()
     {
-        // Проверяем, прошло ли 5 минут для показа рекламы
-        if (!isGameOver && Time.time - lastAdTime >= adIntervalMinutes * 60f)
+        if (!isGameOver)
         {
-            lastAdTime = Time.time;
-            MonetisationManager.Instance?.TryShowInterstitial();
+            float elapsed = Time.time - lastAdTime;
+            if (elapsed >= adIntervalMinutes * 60f)
+            {
+                Debug.Log($"⏰ Ad timer reached: {elapsed}s elapsed");
+                lastAdTime = Time.time;
+                
+                // Реклама по таймеру - с предупреждением
+                MonetisationManager.Instance?.TryShowTimedInterstitial();
+            }
         }
     }
 
@@ -84,11 +89,12 @@ public class GameManager : MonoBehaviour
         SoundManager.Instance?.PlayGameOverSound();
         SoundManager.Instance?.PlayGameOverMusic();
         
-        // Сохраняем рекорд в лидерборд
         LeaderboardManager.Instance?.SetLeaderboard(score);
         
-        // Показываем рекламу при поражении
-        MonetisationManager.Instance?.TryShowInterstitial();
+        Debug.Log($"💀 Game Over! Score: {score}. Showing ad...");
+        
+        // Реклама при поражении - сразу, без кулдауна
+        MonetisationManager.Instance?.TryShowGameOverInterstitial();
         
         StartCoroutine(Fade(gameOver, 1f, 1f));
     }
@@ -117,9 +123,9 @@ public class GameManager : MonoBehaviour
         SoundManager.Instance?.PlayScoreIncrease();
     }
 
-    private void SetScore(int score)
+    private void SetScore(int newScore)
     {
-        this.score = score;
+        score = newScore;
         scoreText.text = score.ToString();
     }
     

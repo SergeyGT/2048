@@ -329,6 +329,15 @@ MonoBehaviour:
       priceCurrencyCode: YAN
       currencyImageURL: https://yastatic.net/s3/games-static/static-data/images/payments/sdk/currency-icon-s@2x.png
       consumed: 1
+    - id: remove_ads
+      title: Disable ads
+      description: Permanently disables all advertising in the game
+      imageURI: demo image
+      price: 30 YAN
+      priceValue: 30
+      priceCurrencyCode: YAN
+      currencyImageURL: https://yastatic.net/s3/games-static/static-data/images/payments/sdk/currency-icon-s@2x.png
+      consumed: 0
   Storage:
     saveLocal: 0
     saveCloud: 1
@@ -353,10 +362,10 @@ MonoBehaviour:
     language: ru
     enableInterAdv: 1
     advIntervalSimulation: 60
-    durationAdv: 0.5
-    loadAdv: 0
-    testFailAds: 0
-    pauseOnFocusGame: 0
+    durationAdv: 5
+    loadAdv: 2
+    testFailAds: 1
+    pauseOnFocusGame: 1
   Templates:
     logoImageFormat: 0
     backgroundImgFormat: 0

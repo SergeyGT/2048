@@ -18,6 +18,7 @@ public class BackgroundManager : MonoBehaviour
     
     private CanvasGroup canvasGroup;
     private Sprite currentBackground;
+    private int currentTier = 1;
     
     private void Awake()
     {
@@ -30,7 +31,6 @@ public class BackgroundManager : MonoBehaviour
             Instance = this;
         }
         
-        // Получаем или добавляем CanvasGroup для плавных переходов
         canvasGroup = backgroundImage.GetComponent<CanvasGroup>();
         if (canvasGroup == null)
         {
@@ -40,17 +40,23 @@ public class BackgroundManager : MonoBehaviour
     
     private void Start()
     {
-        // Устанавливаем начальный фон
-        SetBackgroundByTier(GetCurrentTier());
+        // НЕ вызываем SetBackgroundByTier здесь, 
+        // потому что EnemyManager ещё не загрузил прогресс
+        // Вместо этого ждём вызова из EnemyManager
     }
     
-    private int GetCurrentTier()
+    /// <summary>
+    /// Вызывается из EnemyManager после загрузки прогресса
+    /// </summary>
+    public void InitializeBackground(int enemyIndex, bool allDefeated)
     {
-        if (EnemyManager.Instance == null) return 1;
-        
-        int enemyIndex = EnemyManager.Instance.GetCurrentEnemyIndex();
-        
-        if (EnemyManager.Instance.AllEnemiesDefeated())
+        int tier = GetTierFromIndex(enemyIndex, allDefeated);
+        SetBackgroundImmediate(tier);
+    }
+    
+    private int GetTierFromIndex(int enemyIndex, bool allDefeated)
+    {
+        if (allDefeated)
             return 5; // Victory
         
         if (enemyIndex < 4) return 1;      // Враги 0-3: Tier 1
@@ -59,36 +65,51 @@ public class BackgroundManager : MonoBehaviour
         return 4;                           // Враги 12-15: Tier 4
     }
     
-    public void SetBackgroundByTier(int tier)
+    /// <summary>
+    /// Установить фон мгновенно (без анимации) - используется при загрузке
+    /// </summary>
+    private void SetBackgroundImmediate(int tier)
     {
-        Sprite newBackground = null;
+        Sprite newBackground = GetSpriteForTier(tier);
         
-        switch (tier)
+        if (newBackground != null)
         {
-            case 1:
-                newBackground = tier1Background;
-                break;
-            case 2:
-                newBackground = tier2Background;
-                break;
-            case 3:
-                newBackground = tier3Background;
-                break;
-            case 4:
-                newBackground = tier4Background;
-                break;
-            case 5:
-                newBackground = victoryBackground;
-                break;
-        }
-        
-        if (newBackground != null && newBackground != currentBackground)
-        {
-            StartCoroutine(FadeToNewBackground(newBackground));
+            backgroundImage.sprite = newBackground;
+            currentBackground = newBackground;
+            currentTier = tier;
+            canvasGroup.alpha = 1f;
+            
+            Debug.Log($"🖼️ Background set to tier {tier} (immediate)");
         }
     }
     
-    private System.Collections.IEnumerator FadeToNewBackground(Sprite newSprite)
+    /// <summary>
+    /// Установить фон с анимацией - используется при смене врага во время игры
+    /// </summary>
+    public void SetBackgroundByTier(int tier)
+    {
+        Sprite newBackground = GetSpriteForTier(tier);
+        
+        if (newBackground != null && newBackground != currentBackground)
+        {
+            StartCoroutine(FadeToNewBackground(newBackground, tier));
+        }
+    }
+    
+    private Sprite GetSpriteForTier(int tier)
+    {
+        switch (tier)
+        {
+            case 1: return tier1Background;
+            case 2: return tier2Background;
+            case 3: return tier3Background;
+            case 4: return tier4Background;
+            case 5: return victoryBackground;
+            default: return tier1Background;
+        }
+    }
+    
+    private System.Collections.IEnumerator FadeToNewBackground(Sprite newSprite, int newTier)
     {
         // Затемняем
         float elapsed = 0f;
@@ -103,6 +124,9 @@ public class BackgroundManager : MonoBehaviour
         // Меняем спрайт
         backgroundImage.sprite = newSprite;
         currentBackground = newSprite;
+        currentTier = newTier;
+        
+        Debug.Log($"🖼️ Background changed to tier {newTier}");
         
         // Проявляем
         elapsed = 0f;
@@ -115,10 +139,17 @@ public class BackgroundManager : MonoBehaviour
         canvasGroup.alpha = 1f;
     }
     
-    // Вызывается при смене врага
+    // Вызывается при смене врага во время игры
     public void OnEnemyChanged(int newEnemyIndex)
     {
-        int newTier = GetCurrentTier();
-        SetBackgroundByTier(newTier);
+        if (EnemyManager.Instance == null) return;
+        
+        bool allDefeated = EnemyManager.Instance.AllEnemiesDefeated();
+        int newTier = GetTierFromIndex(newEnemyIndex, allDefeated);
+        
+        if (newTier != currentTier)
+        {
+            SetBackgroundByTier(newTier);
+        }
     }
 }
