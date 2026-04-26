@@ -10,7 +10,7 @@ public class MonetisationManager : MonoBehaviour
     [SerializeField] private float adCooldownMinutes = 5f;
     
     [Header("Ad Warning UI")]
-    [SerializeField] private GameObject adWarningPanel; // Панель с предупреждением "Реклама через 2 секунды..."
+    [SerializeField] private GameObject adWarningPanel;
     [SerializeField] private float adWarningDuration = 2f;
     
     private bool isAdRemoved = false;
@@ -52,22 +52,26 @@ public class MonetisationManager : MonoBehaviour
         YG2.ConsumePurchases();
         CheckAdRemovalStatus();
         
-        // Скрываем панель предупреждения при старте
         if (adWarningPanel != null)
         {
             adWarningPanel.SetActive(false);
         }
+        
+        // ДИАГНОСТИКА
+        Debug.Log($"📊 MonetisationManager STARTED. isAdRemoved={isAdRemoved}, lastAdShowTime={lastAdShowTime}");
     }
     
     // ========== ПОКУПКА ОТКЛЮЧЕНИЯ РЕКЛАМЫ ==========
     
     public void PurchaseAdRemoval()
     {
+        Debug.Log("💳 PurchaseAdRemoval called");
         YG2.BuyPayments("remove_ads");
     }
     
     private void OnPurchaseSuccess(string purchaseId)
     {
+        Debug.Log($"💰 Purchase success: {purchaseId}");
         if (purchaseId == "remove_ads")
         {
             RemoveAds();
@@ -79,29 +83,35 @@ public class MonetisationManager : MonoBehaviour
         isAdRemoved = true;
         PlayerPrefs.SetInt(AD_REMOVED_KEY, 1);
         PlayerPrefs.Save();
-        Debug.Log("Ads removed permanently!");
+        Debug.Log("✅ Ads removed permanently!");
     }
     
     private void CheckAdRemovalStatus()
     {
-        if (YG2.purchases != null)
+        // ВСЕГДА проверяем локальное сохранение
+        if (PlayerPrefs.GetInt(AD_REMOVED_KEY, 0) == 1)
+        {
+            isAdRemoved = true;
+        }
+        
+        // НЕ проверяем YG2.purchases в Editor (это симуляция)
+        #if !UNITY_EDITOR
+        if (!isAdRemoved && YG2.purchases != null)
         {
             foreach (var purchase in YG2.purchases)
             {
                 if (purchase.id == "remove_ads" && purchase.consumed)
                 {
                     isAdRemoved = true;
+                    PlayerPrefs.SetInt(AD_REMOVED_KEY, 1);
+                    PlayerPrefs.Save();
                     break;
                 }
             }
         }
+        #endif
         
-        if (PlayerPrefs.GetInt(AD_REMOVED_KEY, 0) == 1)
-        {
-            isAdRemoved = true;
-        }
-        
-        Debug.Log($"Ad removal status: {(isAdRemoved ? "PURCHASED" : "NOT PURCHASED")}");
+        Debug.Log($"📊 CheckAdRemovalStatus: isAdRemoved={isAdRemoved}");
     }
     
     public bool IsAdRemoved()
@@ -116,106 +126,104 @@ public class MonetisationManager : MonoBehaviour
         PlayerPrefs.DeleteKey(AD_REMOVED_KEY);
         PlayerPrefs.DeleteKey(LAST_AD_TIME_KEY);
         PlayerPrefs.Save();
-        Debug.Log("🔄 Ad status RESET!");
+        Debug.Log("🔄 Ad status RESET! isAdRemoved=false");
     }
     
-    // ========== РЕКЛАМА ПО ТАЙМЕРУ (каждые 5 минут, с предупреждением) ==========
+    // ========== РЕКЛАМА ПО ТАЙМЕРУ ==========
     
-    private bool CanShowTimedInterstitial()
+    public void TryShowTimedInterstitial()
     {
+        Debug.Log($"🔄 TryShowTimedInterstitial called. isAdRemoved={isAdRemoved}, isAdShowing={isAdShowing}, timeSinceLastAd={Time.time - lastAdShowTime}");
+        
         if (isAdRemoved)
         {
-            Debug.Log("❌ Ad blocked: purchased removal");
-            return false;
+            Debug.Log("❌ Timed ad blocked: purchased");
+            return;
+        }
+        
+        if (isAdShowing)
+        {
+            Debug.Log("❌ Timed ad blocked: already showing");
+            return;
+        }
+        
+        if (YG2.nowInterAdv)
+        {
+            Debug.Log("❌ Timed ad blocked: YG ad in progress");
+            return;
         }
         
         float timeSinceLastAd = Time.time - lastAdShowTime;
-        float cooldownSeconds = adCooldownMinutes * 60f;
-        
-        if (timeSinceLastAd < cooldownSeconds)
+        if (timeSinceLastAd < adCooldownMinutes * 60f)
         {
-            float remaining = cooldownSeconds - timeSinceLastAd;
-            Debug.Log($"❌ Ad blocked: cooldown ({Mathf.Floor(remaining)}s remaining)");
-            return false;
+            Debug.Log($"❌ Timed ad blocked: cooldown ({Mathf.Floor(adCooldownMinutes * 60f - timeSinceLastAd)}s remaining)");
+            return;
         }
         
-        if (YG2.nowInterAdv || isAdShowing)
-        {
-            Debug.Log("❌ Ad blocked: already showing");
-            return false;
-        }
-        
-        return true;
-    }
-    
-    /// <summary>
-    /// Реклама по таймеру - с предупреждением за 2 секунды
-    /// </summary>
-    public void TryShowTimedInterstitial()
-    {
-        Debug.Log("🔄 TryShowTimedInterstitial called");
-        
-        if (CanShowTimedInterstitial())
-        {
-            StartCoroutine(ShowAdWithWarning());
-        }
+        Debug.Log("✅ Starting timed ad with warning...");
+        StartCoroutine(ShowAdWithWarning());
     }
     
     private IEnumerator ShowAdWithWarning()
     {
         isAdShowing = true;
         
-        // Показываем предупреждение
         if (adWarningPanel != null)
         {
             adWarningPanel.SetActive(true);
             Debug.Log($"⚠️ Ad warning shown for {adWarningDuration} seconds");
         }
         
-        // Ждем 2 секунды (Realtime потому что игра на паузе)
         yield return new WaitForSecondsRealtime(adWarningDuration);
         
-        // Скрываем предупреждение
         if (adWarningPanel != null)
         {
             adWarningPanel.SetActive(false);
         }
         
-        // Показываем рекламу
-        Debug.Log("✅ Showing timed interstitial ad");
+        Debug.Log("✅ Showing timed interstitial ad NOW");
         ShowInterstitial();
     }
     
-    // ========== РЕКЛАМА ПРИ ПОРАЖЕНИИ (всегда, без кулдауна и предупреждения) ==========
+    // ========== РЕКЛАМА ПРИ ПОРАЖЕНИИ (ВСЕГДА, кроме покупки) ==========
     
-    /// <summary>
-    /// Реклама при поражении - сразу, без кулдауна, без предупреждения
-    /// </summary>
     public void TryShowGameOverInterstitial()
     {
-        Debug.Log("🔄 TryShowGameOverInterstitial called");
+        Debug.Log($"🔄 TryShowGameOverInterstitial called. isAdRemoved={isAdRemoved}, isAdShowing={isAdShowing}, YG2.nowInterAdv={YG2.nowInterAdv}");
         
+        // ЕДИНСТВЕННАЯ проверка - покупка отключения
         if (isAdRemoved)
         {
             Debug.Log("❌ Game over ad blocked: purchased removal");
             return;
         }
         
-        if (YG2.nowInterAdv || isAdShowing)
+        // Проверяем, не показывается ли уже реклама
+        if (YG2.nowInterAdv)
         {
-            Debug.Log("❌ Game over ad blocked: already showing");
+            Debug.Log("❌ Game over ad blocked: YG ad already showing");
             return;
         }
         
-        Debug.Log("✅ Showing game over interstitial ad NOW");
+        if (isAdShowing)
+        {
+            Debug.Log("❌ Game over ad blocked: already in ad process");
+            return;
+        }
+        
+        // ВСЁ ОК - ПОКАЗЫВАЕМ РЕКЛАМУ СРАЗУ
+        Debug.Log("✅✅✅ SHOWING GAME OVER AD NOW! ✅✅✅");
         ShowInterstitial();
     }
     
     private void ShowInterstitial()
     {
+        isAdShowing = true;
         lastAdShowTime = Time.time;
         PlayerPrefs.SetFloat(LAST_AD_TIME_KEY, lastAdShowTime);
         PlayerPrefs.Save();
+        
+        Debug.Log($"📺 ShowInterstitial: Setting timeScale=0, calling YG2.InterstitialAdvShow()");
         
         Time.timeScale = 0f;
         SoundManager.Instance?.PauseMusic();
@@ -225,7 +233,7 @@ public class MonetisationManager : MonoBehaviour
     
     private void OnInterstitialClosed()
     {
-        Debug.Log("📺 Interstitial closed - resuming game");
+        Debug.Log("📺 OnInterstitialClosed - resuming game");
         isAdShowing = false;
         Time.timeScale = 1f;
         SoundManager.Instance?.ResumeMusic();
@@ -233,7 +241,7 @@ public class MonetisationManager : MonoBehaviour
     
     private void OnInterstitialError()
     {
-        Debug.LogError("❌ Interstitial error - resuming game anyway");
+        Debug.LogError("❌ OnInterstitialError - resuming game anyway");
         isAdShowing = false;
         Time.timeScale = 1f;
         SoundManager.Instance?.ResumeMusic();

@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy13
   m_EditorClassIdentifier: 
-  enemyName: ' Elder Dragon'
+  enemyNameRU: "\u0420\u044B\u0446\u0430\u0440\u044C"
+  enemyNameEN: Shadow Knight
   maxHealth: 8500
-  icon: {fileID: 8944846868256607429, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 1.6
+  icon: {fileID: 8944846868256607429, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 720
-  description: 
+  coinsReward: 10

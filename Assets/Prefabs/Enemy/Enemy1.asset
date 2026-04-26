@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy1
   m_EditorClassIdentifier: 
-  enemyName: Giant Rat
+  enemyNameRU: " \u0413\u0438\u0433\u0430\u043D\u0442\u0441\u043A\u0430\u044F \u041A\u0440\u044B\u0441\u0430"
+  enemyNameEN: Giant Rat
   maxHealth: 250
-  icon: {fileID: 345858787701616616, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 1
+  icon: {fileID: 345858787701616616, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 20
-  description: 
+  coinsReward: 10

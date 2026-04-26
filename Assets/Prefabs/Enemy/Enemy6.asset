@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy6
   m_EditorClassIdentifier: 
-  enemyName: Giant Spider
+  enemyNameRU: "\u0417\u043E\u043C\u0431\u0438"
+  enemyNameEN: 'Zombie '
   maxHealth: 1400
-  icon: {fileID: 2210743626963219641, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 1
+  icon: {fileID: 2210743626963219641, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 115
-  description: 
+  coinsReward: 10

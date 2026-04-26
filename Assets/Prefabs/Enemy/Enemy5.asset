@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy5
   m_EditorClassIdentifier: 
-  enemyName: Dark Mage
+  enemyNameRU: "\u0421\u043A\u0435\u043B\u0435\u0442"
+  enemyNameEN: Skeleton
   maxHealth: 1100
-  icon: {fileID: -2378099795243249169, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 0.9
+  icon: {fileID: -2378099795243249169, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 90
-  description: 
+  coinsReward: 10

@@ -1,6 +1,6 @@
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-﻿Build path: C:/UnityGames/unity-2048-tutorial-main/Build/Build
+﻿Build path: C:/UnityGames/unity-2048-tutorial-main/Build/Build/Build
+Build number: 3
+PluginYG version: 2.0091
 Build number: 1
 PluginYG version: 2.007
 =======

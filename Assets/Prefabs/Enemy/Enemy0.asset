@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy0
   m_EditorClassIdentifier: 
-  enemyName: Green Slime
+  enemyNameRU: "\u0421\u043B\u0438\u0437\u0435\u043D\u044C"
+  enemyNameEN: 'Slime '
   maxHealth: 150
-  icon: {fileID: 8188925022607243761, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 1
+  icon: {fileID: 8188925022607243761, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 20
-  description: 
+  coinsReward: 10

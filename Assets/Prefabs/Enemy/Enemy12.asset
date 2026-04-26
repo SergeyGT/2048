@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy12
   m_EditorClassIdentifier: 
-  enemyName: Lich King
+  enemyNameRU: "\u0414\u0435\u043C\u043E\u043D"
+  enemyNameEN: 'Demon '
   maxHealth: 6500
-  icon: {fileID: -4843612453242999184, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 1.4
+  icon: {fileID: -4843612453242999184, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 550
-  description: 
+  coinsReward: 10

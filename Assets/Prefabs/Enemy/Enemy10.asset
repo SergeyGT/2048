@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy10
   m_EditorClassIdentifier: 
-  enemyName: Shadow Assassin
+  enemyNameRU: "\u0413\u043E\u043B\u0435\u043C"
+  enemyNameEN: Stone Golem
   maxHealth: 3800
-  icon: {fileID: -2218474577910636149, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 1.2
+  icon: {fileID: -2218474577910636149, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 320
-  description: 
+  coinsReward: 10

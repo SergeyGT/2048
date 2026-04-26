@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b8145e40dc57e6b4eafba6d8d06e7e1f, type: 3}
   m_Name: Enemy3
   m_EditorClassIdentifier: 
-  enemyName: Bat
+  enemyNameRU: "\u041B\u0435\u0441\u043D\u043E\u0439 \u041F\u0430\u0443\u043A"
+  enemyNameEN: 'Forest Spider '
   maxHealth: 550
-  icon: {fileID: 5528999905930443711, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
-  healthBarColor: {r: 1, g: 0, b: 0, a: 1}
   damageMultiplier: 0.8
+  icon: {fileID: 5528999905930443711, guid: 656547bbeb0de2240871a7bc9670be5d, type: 3}
   scoreReward: 45
-  description: 
+  coinsReward: 10

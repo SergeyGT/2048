@@ -24,7 +24,7 @@ MonoBehaviour:
     languages:
       ru: 1
       en: 1
-      tr: 1
+      tr: 0
       az: 0
       be: 0
       he: 0
@@ -356,12 +356,12 @@ MonoBehaviour:
     loadSceneIfSDKLate: 0
     loadSceneIndex: 0
     initDelaySimulation: 0
-    buildNumber: 2
+    buildNumber: 3
   Simulation:
     device: 0
-    language: ru
+    language: en
     enableInterAdv: 1
-    advIntervalSimulation: 60
+    advIntervalSimulation: 20
     durationAdv: 5
     loadAdv: 2
     testFailAds: 1
@@ -389,10 +389,10 @@ MonoBehaviour:
     imageBackground: 0
     imageName: background.jpg
     gradientBackgroundByAspectRatio:
-      radial: 1
-      angleInclination: 140
-      color1: {r: 0.3679245, g: 0.35244903, b: 0.28982732, a: 1}
-      color2: {r: 0.08810951, g: 0.3962264, b: 0.061676756, a: 1}
+      radial: 0
+      angleInclination: 105
+      color1: {r: 0.21698111, g: 0.21698111, b: 0.21698111, a: 1}
+      color2: {r: 0.056774944, g: 0.3490566, b: 0.03457636, a: 0.7294118}
     pixelRatioEnable: 0
     pixelRatioValue: 1.3
     developerBuild: 0
