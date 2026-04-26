@@ -24,7 +24,11 @@ MonoBehaviour:
     loadSceneIfSDKLate: 0
     loadSceneIndex: 0
     initDelaySimulation: 0
+<<<<<<< Updated upstream
     buildNumber: 1
+=======
+    buildNumber: 2
+>>>>>>> Stashed changes
   Simulation:
     device: 0
     language: ru
@@ -36,19 +40,19 @@ MonoBehaviour:
     logoImageFormat: 0
     backgroundImgFormat: 0
     gradientBackgroundByLoadGame:
-      radial: 0
+      radial: 1
       angleInclination: 140
-      color1: {r: 1, g: 0.831, b: 0.149, a: 1}
-      color2: {r: 0.36, g: 0.09, b: 1, a: 1}
+      color1: {r: 0.32232597, g: 0.7264151, b: 0.14048593, a: 1}
+      color2: {r: 0.22231267, g: 0.108757555, b: 0.49056602, a: 1}
     customProgressBar: 1
     progressBarSettigs:
       round: 1
       roundAngle: 10
       width: 30
-      height: 24
-      color1: {r: 0.25, g: 0.6392, b: 1, a: 1}
-      color2: {r: 1, g: 0.831, b: 0.149, a: 0.7}
-    fixedAspectRatio: 0
+      height: 31
+      color1: {r: 0.8679245, g: 0.72641623, b: 0.36436453, a: 1}
+      color2: {r: 0.754717, g: 0.34300542, b: 0.11747954, a: 0.7}
+    fixedAspectRatio: 1
     aspectRatio: 16/9
     disableForMobile: 1
     fillBackground: 0
