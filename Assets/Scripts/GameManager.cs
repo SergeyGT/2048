@@ -11,8 +11,14 @@ public class GameManager : MonoBehaviour
     [SerializeField] private CanvasGroup gameOver;
     [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private TextMeshProUGUI hiscoreText;
+    [SerializeField] private TextMeshProUGUI coinsText;
+    
+    [Header("Ad Timer")]
+    [SerializeField] private float adIntervalMinutes = 5f;
 
     public int score { get; private set; } = 0;
+    private bool isGameOver = false;
+    private float lastAdTime;
 
     private void Awake()
     {
@@ -23,13 +29,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
-    {
-        if (Instance == this) {
-            Instance = null;
-        }
-    }
-
     private void Start()
     {
         NewGame();
@@ -37,33 +36,67 @@ public class GameManager : MonoBehaviour
 
     public void NewGame()
     {
-        // reset score
         SetScore(0);
-        hiscoreText.text = LoadHiscore().ToString();
+        
+        int bestScore = LeaderboardManager.Instance?.GetBestScore() ?? 0;
+        hiscoreText.text = bestScore.ToString();
+        
+        if (coinsText != null)
+        {
+            coinsText.text = LeaderboardManager.Instance?.GetCoins().ToString() ?? "0";
+        }
 
-        // hide game over screen
         gameOver.alpha = 0f;
         gameOver.interactable = false;
+        isGameOver = false;
 
-        // update board state
         board.ClearBoard();
         board.CreateTile();
         board.CreateTile();
         board.enabled = true;
         
+        lastAdTime = Time.time;
+        
         SoundManager.Instance?.PlayBackgroundMusic();
+        
+        Debug.Log($"🆕 New Game started. Ad timer: {adIntervalMinutes} minutes");
+    }
+
+    private void Update()
+    {
+        if (!isGameOver)
+        {
+            float elapsed = Time.time - lastAdTime;
+            if (elapsed >= adIntervalMinutes * 60f)
+            {
+                Debug.Log($"⏰ Ad timer reached: {elapsed}s elapsed");
+                lastAdTime = Time.time;
+                
+                // Реклама по таймеру - с предупреждением
+                MonetisationManager.Instance?.TryShowTimedInterstitial();
+            }
+        }
     }
 
     public void GameOver()
     {
+        if (isGameOver) return;
+        
+        isGameOver = true;
         board.enabled = false;
         gameOver.interactable = true;
 
         SoundManager.Instance?.PlayGameOverSound();
         SoundManager.Instance?.PlayGameOverMusic();
         
-        StartCoroutine(Fade(gameOver, 1f, 1f));
+        LeaderboardManager.Instance?.SetLeaderboard(score);
         
+        Debug.Log($"💀 Game Over! Score: {score}. Showing ad...");
+        
+        // Реклама при поражении - сразу, без кулдауна
+        MonetisationManager.Instance?.TryShowGameOverInterstitial();
+        
+        StartCoroutine(Fade(gameOver, 1f, 1f));
     }
 
     private IEnumerator Fade(CanvasGroup canvasGroup, float to, float delay = 0f)
@@ -90,26 +123,10 @@ public class GameManager : MonoBehaviour
         SoundManager.Instance?.PlayScoreIncrease();
     }
 
-    private void SetScore(int score)
+    private void SetScore(int newScore)
     {
-        this.score = score;
+        score = newScore;
         scoreText.text = score.ToString();
-
-        SaveHiscore();
-    }
-
-    private void SaveHiscore()
-    {
-        int hiscore = LoadHiscore();
-
-        if (score > hiscore) {
-            PlayerPrefs.SetInt("hiscore", score);
-        }
-    }
-
-    private int LoadHiscore()
-    {
-        return PlayerPrefs.GetInt("hiscore", 0);
     }
     
     public void OnEnemyKilled(EnemyState enemyState)
@@ -119,5 +136,4 @@ public class GameManager : MonoBehaviour
             IncreaseScore(enemyState.scoreReward);
         }
     }
-
 }

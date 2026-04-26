@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 ﻿Build path: C:/UnityGames/unity-2048-tutorial-main/Build/Build
 Build number: 1
@@ -7,3 +8,8 @@ PluginYG version: 2.007
 Build number: 3
 PluginYG version: 2.0091
 >>>>>>> Stashed changes
+=======
+﻿Build path: C:/UnityGames/unity-2048-tutorial-main/Build/Build/Build
+Build number: 2
+PluginYG version: 2.0091
+>>>>>>> ffd3c0dd47ee0f5c0cca622d2ee20784d909d675

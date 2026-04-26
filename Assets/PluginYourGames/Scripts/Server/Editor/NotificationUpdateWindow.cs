@@ -22,7 +22,7 @@ namespace YG.EditorScr
             if (!ModulesInstaller.ExistUpdates(modules)) return;
 
             PluginPrefs.Load();
-            if (PluginPrefs.GetInt(NOTIFICATION_UPDATE_KEY, 0) == 1) return;
+            if (!HasAnyUpdates(modules)) return;
 
             ShowWindow();
         }
@@ -68,7 +68,7 @@ namespace YG.EditorScr
 
             modules = ModulesList.GetGeneratedList(ServerInfo.saveInfo);
 
-            if (!ModulesInstaller.ExistUpdates(modules))
+            if (!HasAnyUpdates(modules))
             {
                 closing = true;
                 Unsubscribe();
@@ -140,11 +140,15 @@ namespace YG.EditorScr
                     GUILayout.Label(last, lastStyle, GUILayout.Width(60));
 
                     // Critical (если есть) — красным
-                    if (m.critical)
+                    if (ModulesInstaller.IsCriticalUpdate(m))
                     {
                         var critStyle = TextStyles.Red();
                         critStyle.alignment = TextAnchor.MiddleCenter;
                         GUILayout.Label(" critical!", critStyle, GUILayout.Width(80));
+                    }
+                    else
+                    {
+                        GUILayout.Label(string.Empty, GUILayout.Width(80));
                     }
 
                     GUILayout.FlexibleSpace();
@@ -191,5 +195,23 @@ namespace YG.EditorScr
                 return v;
             }
         }
+
+        private static bool HasAnyUpdates(List<Module> list)
+        {
+            if (list == null || list.Count == 0)
+                return false;
+
+            foreach (var m in list)
+            {
+                if (string.IsNullOrEmpty(m.projectVersion))
+                    continue;
+
+                if (!ModulesInstaller.IsModuleCurrentVersion(m))
+                    return true;
+            }
+
+            return false;
+        }
+
     }
 }
